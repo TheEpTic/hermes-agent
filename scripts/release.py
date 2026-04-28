@@ -587,6 +587,7 @@ AUTHOR_MAP = {
     "jas9000@gmail.com": "twozle",
     "r.filgueiras@apheris.com": "rfilgueiras",
     "leihaibo1992@gmail.com": "Leihb",
+    "rugved@lmstudio.ai": "rugvedS07",
 }
 
 

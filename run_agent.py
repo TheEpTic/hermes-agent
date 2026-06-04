@@ -2809,8 +2809,8 @@ class AIAgent:
                 original_user_message,
                 session_id=self.session_id or "",
             )
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("memory sync skipped: %s", exc)
 
     def release_clients(self) -> None:
         """Release LLM client resources WITHOUT tearing down session tool state.

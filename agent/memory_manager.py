@@ -408,6 +408,7 @@ class MemoryManager:
                 logger.warning(
                     "Memory provider '%s' sync_turn failed: %s",
                     provider.name, e,
+                    exc_info=True,
                 )
 
     # -- Tools ---------------------------------------------------------------

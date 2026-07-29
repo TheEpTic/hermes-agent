@@ -58,6 +58,21 @@ def test_token_file_is_read_and_unlinked_through_private_directory(tmp_path, mon
         reset_hermes_home_override(override)
 
 
+def test_token_file_stays_under_root_home_when_named_profile_is_active(tmp_path):
+    root_home = tmp_path / "home" / ".hermes"
+    token_dir = root_home / "desktop-ssh" / ("a" * 32)
+    token_dir.mkdir(parents=True, mode=0o700)
+    token_path = token_dir / "0123456789abcdef.token"
+    token_path.write_text("b" * 64)
+    token_path.chmod(0o600)
+    override = set_hermes_home_override(root_home / "profiles" / "gotavex")
+    try:
+        assert _read_ssh_session_token_file(str(token_path)) == "b" * 64
+        assert not token_path.exists()
+    finally:
+        reset_hermes_home_override(override)
+
+
 @pytest.mark.skipif(os.name == "nt", reason="POSIX symlink contract")
 def test_token_file_rejects_symlink(tmp_path, monkeypatch):
     home = tmp_path / "home"

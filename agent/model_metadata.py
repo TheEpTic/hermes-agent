@@ -1517,32 +1517,51 @@ def fetch_endpoint_model_metadata(
     return {}
 
 
-def _resolve_endpoint_context_length(
+def _resolve_endpoint_metadata_value(
     model: str,
     base_url: str,
+    key: str,
     api_key: str = "",
 ) -> Optional[int]:
-    """Resolve context length from an endpoint's live ``/models`` metadata."""
+    """Resolve one numeric field from an endpoint's live ``/models`` metadata."""
     endpoint_metadata = fetch_endpoint_model_metadata(base_url, api_key=api_key)
     matched = endpoint_metadata.get(model)
     if not matched:
         if len(endpoint_metadata) == 1:
             matched = next(iter(endpoint_metadata.values()))
         elif model:
-            # Substring fuzzy match — only meaningful with a non-empty model
-            # name.  An empty string is a substring of EVERY key, which would
-            # "match" whatever model the endpoint happens to list first (e.g.
-            # a 32K embedding model on the Nous portal) and poison the
-            # resolved context length for the whole agent.
-            for key, entry in endpoint_metadata.items():
-                if model in key or key in model:
+            for model_id, entry in endpoint_metadata.items():
+                if model in model_id or model_id in model:
                     matched = entry
                     break
-    if matched:
-        context_length = matched.get("context_length")
-        if isinstance(context_length, int):
-            return context_length
-    return None
+    value = matched.get(key) if matched else None
+    return value if isinstance(value, int) and value > 0 else None
+
+
+def _resolve_endpoint_context_length(
+    model: str,
+    base_url: str,
+    api_key: str = "",
+) -> Optional[int]:
+    """Resolve context length from an endpoint's live ``/models`` metadata."""
+    return _resolve_endpoint_metadata_value(model, base_url, "context_length", api_key)
+
+
+def get_model_max_completion_tokens(
+    model: str,
+    base_url: str = "",
+    api_key: str = "",
+    provider: str = "",
+) -> Optional[int]:
+    """Return an endpoint-advertised output cap when the endpoint provides one."""
+    if not base_url or provider.strip().lower() != "conduit":
+        return None
+    return _resolve_endpoint_metadata_value(
+        model,
+        base_url,
+        "max_completion_tokens",
+        api_key,
+    )
 
 
 def _get_context_cache_path() -> Path:

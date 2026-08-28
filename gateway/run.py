@@ -2864,11 +2864,27 @@ def _resolve_runtime_agent_kwargs() -> dict:
             max_tokens = mt
     # Fall back to a per-provider output cap (custom_providers max_output_tokens)
     # only when the documented global model.max_tokens isn't set, so the global
-    # key always wins.
+    # key always wins. For metadata-capable endpoints, use the lower of the
+    # explicit Hermes cap and the endpoint-advertised cap.
     if max_tokens is None:
         _runtime_mot = runtime.get("max_output_tokens")
         if isinstance(_runtime_mot, int) and _runtime_mot > 0:
             max_tokens = _runtime_mot
+
+    _endpoint_max_tokens = None
+    try:
+        from agent.model_metadata import get_model_max_completion_tokens
+        _endpoint_max_tokens = get_model_max_completion_tokens(
+            _resolve_gateway_model(),
+            base_url=runtime.get("base_url") or "",
+            api_key=runtime.get("api_key") or "",
+            provider=runtime.get("provider") or "",
+        )
+    except Exception:
+        logger.debug("Could not resolve endpoint output cap", exc_info=True)
+    if isinstance(_endpoint_max_tokens, int) and _endpoint_max_tokens > 0:
+        if max_tokens is None or _endpoint_max_tokens < max_tokens:
+            max_tokens = _endpoint_max_tokens
 
     return {
         "api_key": runtime.get("api_key"),

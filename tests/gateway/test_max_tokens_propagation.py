@@ -95,3 +95,51 @@ def test_per_provider_max_output_tokens_fallback(isolated_home):
     assert kw["max_tokens"] == 12000
 
 
+def test_endpoint_cap_wins_when_lower_than_explicit_cap(isolated_home, monkeypatch):
+    write_cfg, fresh_gateway = isolated_home
+    write_cfg(
+        """
+        model:
+          default: camelstream:auto
+          provider: conduit
+          max_tokens: 131072
+        providers:
+          conduit:
+            api: http://127.0.0.1:8770/v1
+            api_key: sk-test
+        """
+    )
+    _, fresh_gateway = isolated_home
+    grun = fresh_gateway()
+    monkeypatch.setattr(
+        "agent.model_metadata.get_model_max_completion_tokens",
+        lambda *args, **kwargs: 65536,
+    )
+    kw = grun._resolve_runtime_agent_kwargs()
+    assert kw["max_tokens"] == 65536
+
+
+def test_endpoint_cap_does_not_raise_explicit_cap(isolated_home, monkeypatch):
+    write_cfg, fresh_gateway = isolated_home
+    write_cfg(
+        """
+        model:
+          default: camelstream:auto
+          provider: conduit
+          max_tokens: 65536
+        providers:
+          conduit:
+            api: http://127.0.0.1:8770/v1
+            api_key: sk-test
+        """
+    )
+    _, fresh_gateway = isolated_home
+    grun = fresh_gateway()
+    monkeypatch.setattr(
+        "agent.model_metadata.get_model_max_completion_tokens",
+        lambda *args, **kwargs: 131072,
+    )
+    kw = grun._resolve_runtime_agent_kwargs()
+    assert kw["max_tokens"] == 65536
+
+

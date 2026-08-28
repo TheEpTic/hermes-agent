@@ -32,6 +32,35 @@ from agent.model_metadata import (
     _MODEL_CACHE_TTL,
     estimate_request_tokens_rough,
 )
+from agent import model_metadata as model_metadata_module
+
+
+class TestEndpointOutputMetadata:
+    def test_resolves_conduit_max_completion_tokens(self, monkeypatch):
+        monkeypatch.setattr(
+            model_metadata_module,
+            "fetch_endpoint_model_metadata",
+            lambda *_args, **_kwargs: {
+                "camelstream:auto": {"max_completion_tokens": 131072}
+            },
+        )
+        assert model_metadata_module.get_model_max_completion_tokens(
+            "camelstream:auto",
+            base_url="http://127.0.0.1:8770/v1",
+            provider="conduit",
+        ) == 131072
+
+    def test_ignores_output_metadata_for_other_providers(self, monkeypatch):
+        monkeypatch.setattr(
+            model_metadata_module,
+            "fetch_endpoint_model_metadata",
+            lambda *_args, **_kwargs: {"model": {"max_completion_tokens": 131072}},
+        )
+        assert model_metadata_module.get_model_max_completion_tokens(
+            "model",
+            base_url="https://example.invalid/v1",
+            provider="openrouter",
+        ) is None
 
 
 # =========================================================================
